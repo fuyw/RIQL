@@ -1,18 +1,21 @@
-# JaxIQL
+# A Closer Look at Offline RL Agents
 
-A Jax implementation of in-sample Q-learning [(IQL)](https://arxiv.org/abs/2110.06169).
+## Baselines
+- TD3BC
+- CQL
+- COMBO
+- IQL
 
-![res](imgs/mujoco.png)
+## Evaluation Experiments
 
-![res](imgs/antmaze.png)
+### Representation Experiments
 
-To run experiments in `mujoco` environment
-```
-python main.py --config=configs/mujoco.py --config.env_name=halfcheetah-medium-v2 --config.seed=0
-```
+### Value Funtion Experiments
 
-To run experiments in `antmaze` environment
-```
-python main.py --config=configs/antmaze.py --config.env_name=antmaze-medium-play-v0 --config.seed=0
-```
-# RIQL
+### Policy Experiments
+
+## Relaxed In-smaple Q-Learning
+
+## Conservative Data Augmentation
+
+
