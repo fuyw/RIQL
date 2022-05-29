@@ -8,17 +8,25 @@ config_flags.DEFINE_config_file("config", default="configs/mujoco.py")
 FLAGS = flags.FLAGS
 
 
+mle_alphas = {
+    "halfcheetah-medium-v2": 0.1,
+    "halfcheetah-medium-replay-v2": 0.25,
+    "halfcheetah-medium-expert-v2": 1.0,
+    "hopper-medium-v2": 1.0,
+    "hopper-medium-replay-v2": 0.25,
+    "hopper-medium-expert-v2": 1.0,
+    "walker2d-medium-v2": 1.0,
+    "walker2d-medium-replay-v2": 0.25,
+    "walker2d-medium-expert-v2": 1.5,
+}
+
+
+
 def main(argv):
     configs = FLAGS.config
-    # if configs.env_name in [
-    #         "halfcheetah-medium-v2",
-    #         "halfcheetah-medium-replay-v2",
-    #         "halfcheetah-medium-expert-v2",
-    #         "hopper-medium-replay-v2"]:
-    #     configs.mle_alpha = 0.5
-
-    os.makedirs(f"{configs.log_dir}/{configs.env_name}/{configs.algo}", exist_ok=True)
-    os.makedirs(f"{configs.model_dir}/{configs.env_name}/{configs.algo}", exist_ok=True)
+    configs.mle_alpha = mle_alphas[configs.env_name]
+    os.makedirs(f"{configs.log_dir}/{configs.env_name}", exist_ok=True)
+    os.makedirs(f"{configs.model_dir}/{configs.env_name}", exist_ok=True)
     train.train_and_evaluate(configs)
 
 

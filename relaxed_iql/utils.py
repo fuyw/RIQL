@@ -75,7 +75,3 @@ def target_update(params: FrozenDict, target_params: FrozenDict, tau: float) -> 
         return tau*param + (1-tau)*target_param
     updated_params = jax.tree_util.tree_map(_update, params, target_params)
     return updated_params
-
-
-def get_kernel_norm(kernel_params: jnp.array):
-    return jnp.linalg.norm(kernel_params)
