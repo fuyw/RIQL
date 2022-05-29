@@ -72,5 +72,5 @@ def get_logger(fname: str) -> logging.Logger:
 def target_update(params: FrozenDict, target_params: FrozenDict, tau: float) -> FrozenDict:
     def _update(param: FrozenDict, target_param: FrozenDict):
         return tau*param + (1-tau)*target_param
-    updated_params = jax.tree_multimap(_update, params, target_params)
+    updated_params = jax.tree_util.tree_map(_update, params, target_params)
     return updated_params

@@ -1,6 +1,4 @@
 from typing import Tuple
-import os
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".2"
 import ml_collections
 import gym
 import d4rl
@@ -10,11 +8,6 @@ import pandas as pd
 from tqdm import trange
 from models import CQLAgent
 from utils import ReplayBuffer, get_logger
-
-
-def normalize_rewards(replay_buffer: ReplayBuffer, env_name: str):
-    if 'maze' in env_name:
-        replay_buffer.rewards = replay_buffer.rewards * 10.0 - 5.0
 
 
 def eval_policy(agent, eval_env, eval_episodes: int = 10) -> Tuple[float, float]:
@@ -76,7 +69,6 @@ def train_and_evaluate(configs: ml_collections.ConfigDict):
     # replay buffer
     replay_buffer = ReplayBuffer(obs_dim, act_dim)
     replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
-    normalize_rewards(replay_buffer, configs.env_name)
 
     logs = [{"step": 0, "reward": eval_policy(agent, env, configs.eval_episodes)[0]}]  # 2.38219
     for t in trange(1, configs.max_timesteps+1):

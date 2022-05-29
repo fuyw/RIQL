@@ -453,7 +453,6 @@ class CQLAgent:
         checkpoints.save_checkpoint(fname, self.critic_state, cnt, prefix="critic_", keep=20, overwrite=True)
 
     def load(self, ckpt_dir, step):
-        # ckpt_dir=f"saved_models/antmaze-large-play-v0/cql_s0_L2/"
         self.actor_state = checkpoints.restore_checkpoint(ckpt_dir=ckpt_dir, target=self.actor_state,
                                                           step=step, prefix="actor_")
         self.critic_state = checkpoints.restore_checkpoint(ckpt_dir=ckpt_dir, target=self.critic_state,

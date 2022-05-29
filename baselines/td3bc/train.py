@@ -13,14 +13,10 @@ from utils import ReplayBuffer, get_logger
 
 
 def normalize_rewards(replay_buffer: ReplayBuffer, env_name: str):
-    if 'v2' in env_name:
-        # mujoco environments
-        normalize_info_df = pd.read_csv('configs/minmax_traj_reward.csv', index_col=0).set_index('env_name')
-        min_traj_reward, max_traj_reward = normalize_info_df.loc[env_name, ['min_traj_reward', 'max_traj_reward']]
-        replay_buffer.rewards = replay_buffer.rewards / (max_traj_reward - min_traj_reward) * 1000
-    if 'v0' in env_name:
-        # antmaze environments
-        replay_buffer.rewards -= 1.0
+    # mujoco environments
+    normalize_info_df = pd.read_csv('configs/minmax_traj_reward.csv', index_col=0).set_index('env_name')
+    min_traj_reward, max_traj_reward = normalize_info_df.loc[env_name, ['min_traj_reward', 'max_traj_reward']]
+    replay_buffer.rewards = replay_buffer.rewards / (max_traj_reward - min_traj_reward) * 1000
 
 
 def eval_policy(agent: TD3BCAgent, env: gym.Env, mean: np.ndarray = 0.0,

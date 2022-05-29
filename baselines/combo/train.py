@@ -1,6 +1,5 @@
 from typing import Tuple
 import os
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".2"
 import jax
 import ml_collections
 import gym
@@ -9,14 +8,10 @@ import time
 import numpy as np
 import pandas as pd
 from tqdm import trange
-from models import COMBOAgent, COMBOAgent_cqlreal, COMBOAgent_nocql, COMBOAgent_noimp
+from models import COMBOAgent
 from utils import ReplayBuffer, get_logger
 
 
-AGENTS = {"combo": COMBOAgent,
-          "COMBOAgent_cqlreal": COMBOAgent_cqlreal,
-          "COMBOAgent_nocql": COMBOAgent_nocql,
-          "COMBOAgent_noimp": COMBOAgent_noimp}
 def normalize_rewards(replay_buffer: ReplayBuffer, env_name: str):
     if 'maze' in env_name:
         replay_buffer.rewards = replay_buffer.rewards * 10.0 - 5.0
@@ -59,32 +54,35 @@ def train_and_evaluate(configs: ml_collections.ConfigDict):
     env.action_space.seed(configs.seed)
 
     # COMBO agent
-    agent = AGENTS[configs.algo](env_name=configs.env_name,
-                                 obs_dim=obs_dim,
-                                 act_dim=act_dim,
-                                 max_action=max_action,
-                                 seed=configs.seed,
-                                 tau=configs.tau,
-                                 gamma=configs.gamma,
-                                 noise_scale=configs.noise_scale,
-                                 lr_critic=configs.lr_critic,
-                                 lr_actor=configs.lr_actor,
-                                 target_entropy=configs.target_entropy,
-                                 backup_entropy=configs.backup_entropy,
-                                 num_random=configs.num_random,
-                                 min_q_weight=configs.min_q_weight,
-                                 horizon=configs.horizon,
-                                 real_ratio=configs.real_ratio,
-                                 batch_size=configs.batch_size,
-                                 rollout_batch_size=configs.rollout_batch_size,
-                                 rollout_random=configs.rollout_random,
-                                 hidden_dims=configs.hidden_dims,
-                                 initializer=configs.initializer)
+    agent = COMBOAgent(env_name=configs.env_name,
+                       obs_dim=obs_dim,
+                       act_dim=act_dim,
+                       max_action=max_action,
+                       seed=configs.seed,
+                       tau=configs.tau,
+                       gamma=configs.gamma,
+                       noise_scale=configs.noise_scale,
+                       lr_critic=configs.lr_critic,
+                       lr_actor=configs.lr_actor,
+                       target_entropy=configs.target_entropy,
+                       backup_entropy=configs.backup_entropy,
+                       num_random=configs.num_random,
+                       min_q_weight=configs.min_q_weight,
+                       horizon=configs.horizon,
+                       real_ratio=configs.real_ratio,
+                       batch_size=configs.batch_size,
+                       rollout_batch_size=configs.rollout_batch_size,
+                       rollout_random=configs.rollout_random,
+                       hidden_dims=configs.hidden_dims,
+                       initializer=configs.initializer)
+
+    # Train the model
     # agent.model.train()
 
     # Load the trained dynamics model
     agent.model.load(f'saved_dynamics_models/{configs.env_name}')
-    # agent.model.load(f'{configs.dynamics_model_dir}/{configs.env_name}/s0')
+
+    # Print model architecture
     logger.info(f"\nThe actor architecture is:\n{jax.tree_map(lambda x: x.shape, agent.actor_state.params)}")
     logger.info(f"\nThe critic architecture is:\n{jax.tree_map(lambda x: x.shape, agent.critic_state.params)}")
 
@@ -95,7 +93,7 @@ def train_and_evaluate(configs: ml_collections.ConfigDict):
     normalize_rewards(replay_buffer, configs.env_name)
 
     # Evaluate the untrained policy
-    logs = [{"step": 0, "reward": eval_policy(agent, env, configs.eval_episodes)[0]}]  # 2.38219
+    logs = [{"step": 0, "reward": eval_policy(agent, env, configs.eval_episodes)[0]}]
     logger.info(f"\n[# Step 0] eval_reward: {logs[0]['reward']:.2f}\n")
     for t in trange(1, configs.max_timesteps+1):
         log_info = agent.update(replay_buffer, model_buffer)

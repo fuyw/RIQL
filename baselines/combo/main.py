@@ -21,11 +21,11 @@ conf_dict = {
 }
 
 
-
 def main(argv):
     configs = FLAGS.config
     os.makedirs(f"{configs.log_dir}/{configs.env_name}", exist_ok=True)
     os.makedirs(f"{configs.model_dir}/{configs.env_name}", exist_ok=True)
+    os.makedirs(f"{configs.dynamics_model_dir}/{configs.env_name}", exist_ok=True)
     if configs.env_name in conf_dict:
         configs.horizon = conf_dict[configs.env_name]["horizon"]
         configs.min_q_weight = conf_dict[configs.env_name]["min_q_weight"]
