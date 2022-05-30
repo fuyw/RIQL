@@ -1,6 +1,5 @@
 import os
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
 import time
 
@@ -10,9 +9,11 @@ import numpy as np
 import pandas as pd
 from tqdm import trange
 
-from agents import (BCAgent, COMBOAgent, CQLAgent, CQLAgent2, IQLAgent,
-                    TD3Agent, TD3BCAgent)
+from agents import (COMBOAgent, CQLAgent, CQLAgent2,
+                    IQLAgent, TD3Agent, TD3BCAgent,
+                    BCAgent)
 from utils import ReplayBuffer
+
 
 ###############
 # Exp Setting #
@@ -40,17 +41,9 @@ ENVS = [
 ]
 
 # some cql ckpt used grad_clip in optimizer
-CQL1_DICT = {
-    "walker2d-medium-v2": [0, 1, 2],
-    "hopper-medium-v2": [0, 1, 2],
-    "halfcheetah-medium-v2": [0, 1, 2],
-    "walker2d-medium-replay-v2": [],
-    "hopper-medium-replay-v2": [],
-    "halfcheetah-medium-replay-v2": [],
-    "walker2d-medium-expert-v2": [],
-    "hopper-medium-expert-v2": [],
-    "halfcheetah-medium-expert-v2": []
-}
+CQL1_DICT = {"walker2d-medium-v2": [0, 1, 2], "hopper-medium-v2": [0, 1, 2], "halfcheetah-medium-v2": [0, 1, 2],
+             "walker2d-medium-replay-v2": [], "hopper-medium-replay-v2": [], "halfcheetah-medium-replay-v2": [],
+             "walker2d-medium-expert-v2": [], "hopper-medium-expert-v2": [], "halfcheetah-medium-expert-v2": []}
 
 
 ##################
@@ -86,22 +79,19 @@ def sample_trajectory(env_name):
     obs_mean, obs_std = replay_buffer.normalize_obs()
 
     # use agent ckpt to collect trajectories
-    for algo in ALGOS[:2]:
+    for algo in ALGOS:
         # load model ckpt
         ckpt_dirs = os.listdir(f"saved_models/{algo}_saved_models/{env_name}")
         for seed in range(5):
             if algo == "cql" and seed in CQL1_DICT[env_name]:
                 agent = CQLAgent2(obs_dim=obs_dim, act_dim=act_dim, seed=seed)
             else:
-                agent = AGENTS[algo](obs_dim=obs_dim,
-                                     act_dim=act_dim,
-                                     seed=seed)
+                agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)            
             ckpt_dir = f"saved_models/{algo}_saved_models/{env_name}/" + [
                 i for i in ckpt_dirs if f"{algo}_s{seed}" in i
             ][0]
 
-            untrained_eval_reward, _ = eval_policy(agent, algo, env, obs_mean,
-                                                   obs_std)
+            untrained_eval_reward, _ = eval_policy(agent, algo, env, obs_mean, obs_std)
             agent.load(ckpt_dir, step=200)
             eval_reward, _ = eval_policy(agent, algo, env, obs_mean, obs_std)
             print(
@@ -112,7 +102,6 @@ def sample_trajectory(env_name):
             )
 
             observations_, actions_, rewards_, next_observations_, dones_ = [], [], [], [], []
-            # collect fixed steps instead of fixed trajectories
             # for _ in trange(100, desc="[Rollout 100 trajectories]"):
             while len(observations_) < 50000:
                 obs, done = env.reset(), False
@@ -121,8 +110,7 @@ def sample_trajectory(env_name):
                         normalized_obs = (obs - obs_mean) / obs_std
                     else:
                         normalized_obs = obs
-                    action = agent.sample_action(agent.actor_state.params,
-                                                 normalized_obs)
+                    action = agent.sample_action(agent.actor_state.params, normalized_obs)
                     next_obs, reward, done, _ = env.step(action)
                     observations_.append(obs)
                     actions_.append(action)
@@ -146,17 +134,16 @@ def sample_trajectory(env_name):
     # optimal agent #
     #################
     optimal_agent = TD3Agent(obs_dim=obs_dim, act_dim=act_dim)
-    untrained_eval_reward, _ = eval_policy(optimal_agent, "td3", env, obs_mean,
-                                           obs_std)
+    untrained_eval_reward, _ = eval_policy(optimal_agent, "td3", env, obs_mean, obs_std)
     optimal_ckpt_file = f"saved_models/td3_saved_models/{env_name.split('-')[0]}-v2/optimal"
     optimal_agent.load(optimal_ckpt_file, step=0)
     eval_reward, _ = eval_policy(optimal_agent, "td3", env, obs_mean, obs_std)
-    print(
-        f"Untrained optimal agent: eval_reward = {untrained_eval_reward:.2f}")
+    print(f"Untrained optimal agent: eval_reward = {untrained_eval_reward:.2f}")
     print(f"Ckpt optimal agent: eval_reward = {eval_reward:.2f}")
 
     # collect trajectories with optimal agent
     observations_, actions_, rewards_, next_observations_, dones_ = [], [], [], [], []
+
     # for _ in trange(100, desc="[Rollout 100 trajectories]"):
     while len(observations_) < 50000:
         obs, done = env.reset(), False
@@ -186,8 +173,7 @@ def sample_trajectory(env_name):
     # bc agent #
     ############
     bc_agent = BCAgent(obs_dim=obs_dim, act_dim=act_dim)
-    untrained_eval_reward, _ = eval_policy(bc_agent, "bc", env, obs_mean,
-                                           obs_std)
+    untrained_eval_reward, _ = eval_policy(bc_agent, "bc", env, obs_mean, obs_std)
     bc_agent.load(f"saved_models/bc_saved_models/{env_name}", step=10)
     eval_reward, _ = eval_policy(bc_agent, "bc", env, obs_mean, obs_std)
     print(f"Untrained bc agent: eval_reward = {untrained_eval_reward:.2f}")
@@ -225,10 +211,3 @@ if __name__ == "__main__":
     for env_name in ENVS:
         os.makedirs(f"data/trajectories/{env_name}", exist_ok=True)
         sample_trajectory(env_name)
-
-# def check():
-#     for env_name in ENVS:
-#         for algo in ALGOS:
-#             for seed in range(5):
-#                 data = np.load(f"data/trajectories/{env_name}/{algo}_s{seed}.npz")
-#                 print(len(data["observations"]))
