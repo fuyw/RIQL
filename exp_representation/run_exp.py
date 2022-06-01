@@ -1,6 +1,4 @@
 import os
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = ".2"
-
 import time
 
 import d4rl
@@ -9,7 +7,7 @@ import numpy as np
 import pandas as pd
 from tqdm import trange
 
-from agents import COMBOAgent, CQLAgent, CQLAgent2, IQLAgent, TD3Agent, TD3BCAgent
+from agents import COMBOAgent, CQLAgent, IQLAgent, TD3Agent, TD3BCAgent
 from models import ProbeTrainer
 from utils import (ReplayBuffer, get_dot_product, get_kernel_norm,
                    get_optimal_actions, get_q_value, get_s_effective_dim,
@@ -36,10 +34,6 @@ ENVS = [
     "walker2d-medium-replay-v2",
     "walker2d-medium-expert-v2",
 ]
-# some cql ckpt used grad_clip in optimizer
-CQL1_DICT = {"walker2d-medium-v2": [0, 1, 2], "hopper-medium-v2": [0, 1, 2], "halfcheetah-medium-v2": [0, 1, 2],
-             "walker2d-medium-replay-v2": [], "hopper-medium-replay-v2": [], "halfcheetah-medium-replay-v2": [],
-             "walker2d-medium-expert-v2": [], "hopper-medium-expert-v2": [], "halfcheetah-medium-expert-v2": []}
 
 
 # Load optimal TD3 agent
@@ -166,17 +160,6 @@ def get_ckpt_info(env, agent, algo, obs_mean, obs_std, ckpt_dir, step,
     return res
 
 
-# conduct 6 probing experiment for each ckpt
-def get_ckpt_info2(agent, ckpt_dir, step, observations, actions, random_idx):
-    if step > 0: agent.load(ckpt_dir, step)
-    s_effective_dim_info = get_s_effective_dim(agent, observations[random_idx])
-    sa_effective_dim_info = get_sa_effective_dim(agent,
-                                                 observations[random_idx],
-                                                 actions[random_idx])
-    res = {**sa_effective_dim_info, **s_effective_dim_info}
-    return res
-
-
 # fixed idx
 fixed_idx = range(0, 100000, 5)
 
@@ -219,17 +202,12 @@ def run_algo_exp(algo="td3bc"):
                 continue
 
             res = []
-            # agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
-            if algo == "cql" and seed in CQL1_DICT[env_name]:
-                agent = CQLAgent2(obs_dim=obs_dim, act_dim=act_dim, seed=seed)
-            else:
-                agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
+            agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
 
             ckpt_dir = f"saved_models/{algo}_saved_models/{env_name}/" + [
                 i for i in ckpt_dirs if f"{algo}_s{seed}" in i
             ][0]
-            # for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
-            for step in trange(200, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
+            for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
                 step_res = get_ckpt_info(env, agent, algo, obs_mean, obs_std,
                                          ckpt_dir, step, observations, actions,
                                          next_observations, fixed_idx)
@@ -289,7 +267,7 @@ def run_exp(env_name="halfcheetah-medium-v2"):
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
 
-    # load replay buffes
+    # load replay buffers
     replay_buffer = ReplayBuffer(obs_dim, act_dim)
     replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
     obs_mean, obs_std = replay_buffer.normalize_obs()
@@ -305,8 +283,7 @@ def run_exp(env_name="halfcheetah-medium-v2"):
     optimal_actions = get_optimal_actions(optimal_agent, observations)
     optimal_Vs = get_q_value(optimal_agent, observations, optimal_actions)
 
-    # for algo in ALGOS:
-    for algo in ["td3"]:
+    for algo in ALGOS:
         # normalize the observations
         observations, actions, rewards, next_observations = load_data(env_name)
         if algo == "td3bc":
@@ -315,20 +292,13 @@ def run_exp(env_name="halfcheetah-medium-v2"):
         # load model ckpt
         ckpt_dirs = os.listdir(f"saved_models/{algo}_saved_models/{env_name}")
         for seed in range(5):
-            # tmp_df = pd.read_csv(f"res/{env_name}/{algo}/s{seed}.csv")
-            # if len(tmp_df) == 11:
-            #     continue
+            tmp_df = pd.read_csv(f"res/{env_name}/{algo}/s{seed}.csv")
             res = []
-            if algo == "cql" and seed in CQL1_DICT[env_name]:
-                agent = CQLAgent2(obs_dim=obs_dim, act_dim=act_dim, seed=seed)
-            else:
-                agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
+            agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
 
             ckpt_dir = f"saved_models/{algo}_saved_models/{env_name}/" + [
                 i for i in ckpt_dirs if f"{algo}_s{seed}" in i][0]
-            # for step in trange(200, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
-            # for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
-            for step in [10]:
+            for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
                 step_res = get_ckpt_info(env, agent, algo, obs_mean, obs_std,
                                          ckpt_dir, step, observations, actions,
                                          next_observations, fixed_idx)
@@ -386,7 +356,7 @@ def run_eff_dim_exp(algo="td3bc", L=5):
         obs_dim = env.observation_space.shape[0]
         act_dim = env.action_space.shape[0]
 
-        # load replay buffes
+        # load replay buffers
         replay_buffer = ReplayBuffer(obs_dim, act_dim)
         replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
         obs_mean, obs_std = replay_buffer.normalize_obs()
@@ -404,25 +374,15 @@ def run_eff_dim_exp(algo="td3bc", L=5):
         # load model ckpt
         ckpt_dirs = os.listdir(f"saved_models/{algo}_saved_models/{env_name}")
         for seed in range(5):
-
-            # the result already exists
-            # if os.path.exists(f"res/{env_name}/{algo}/s{seed}_eff_dim_{L}W.csv"):
-            #     continue
-
             res = []
-            # agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
-            if algo == "cql" and seed in CQL1_DICT[env_name]:
-                agent = CQLAgent2(obs_dim=obs_dim, act_dim=act_dim, seed=seed)
-            else:
-                agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)            
+            agent = AGENTS[algo](obs_dim=obs_dim, act_dim=act_dim, seed=seed)
             ckpt_dir = f"saved_models/{algo}_saved_models/{env_name}/" + [
                 i for i in ckpt_dirs if f"{algo}_s{seed}" in i
             ][0]
 
-            # for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
-            for step in [200]:
-                step_res = get_ckpt_info2(agent, ckpt_dir, step, observations,
-                                          actions, random_idx)
+            for step in trange(0, 220, 20, desc=f"[{algo}][{env_name}][seed{seed}]"):
+                step_res = get_ckpt_info(agent, ckpt_dir, step, observations,
+                                         actions, random_idx)
                 res.append(step_res)
 
             res_df = pd.DataFrame(res)
@@ -433,11 +393,5 @@ if __name__ == "__main__":
     for env_name in ENVS:
         for algo in ALGOS:
             os.makedirs(f"res/{env_name}/{algo}", exist_ok=True)
-
-    # for env_name in ['halfcheetah-medium-replay-v2', 'halfcheetah-medium-v2', 'hopper-medium-v2']:
-    #     run_exp(env_name)
     run_exp("halfcheetah-medium-v2")
 
-    # for algo in ALGOS:
-    # run_eff_dim_exp(algo, L=5)
-    # run_eff_dim_exp("td3", L=5)
